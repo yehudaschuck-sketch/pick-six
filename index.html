@@ -149,6 +149,19 @@ details.flags li{margin:4px 0} details.flags li b{color:var(--gold)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script>
+/* Bump this on every upload: open copies (including home-screen apps) reload themselves when it changes. */
+const SITE_VERSION = '3';
+async function checkVersion(){
+  if (!/^https?:/.test(location.protocol)) return;
+  try{
+    const t = await (await fetch(location.pathname+'?_='+Date.now(), {cache:'no-store'})).text();
+    const m = /const SITE_VERSION = '([^']+)'/.exec(t);
+    if (m && m[1]!==SITE_VERSION) location.replace(location.pathname+'?v='+encodeURIComponent(m[1]));
+  }catch(e){}
+}
+checkVersion(); setInterval(checkVersion, 5*60*1000);
+document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) checkVersion(); });
+
 /* ============ CONFIG ============ */
 const CFG = {
   sheetId: '1Vh0D0JtKJhK5nxYWz_RLdyAnPd9hOjsSkZZNKOa8zjI',
