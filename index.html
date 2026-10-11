@@ -183,7 +183,8 @@ const gkey = (a,b) => [a,b].sort().join('-');
 const fmtLine = n => n===0 ? 'PK' : (n>0?'+':'')+(Number.isInteger(n)?n:n.toFixed(1));
 const rec0 = () => ({w:0,l:0,t:0,lw:0,ll:0,lt:0});
 const addRec = (a,b) => { for (const k in b) a[k]+=b[k]; return a; };
-const tot = (r,live=true) => live ? {w:r.w+r.lw,l:r.l+r.ll,t:r.t+r.lt} : {w:r.w,l:r.l,t:r.t};
+// records count final games only; in-progress games are shown on the board but never counted
+const tot = (r,live=false) => live ? {w:r.w+r.lw,l:r.l+r.ll,t:r.t+r.lt} : {w:r.w,l:r.l,t:r.t};
 const recStr = r => `${r.w}-${r.l}${r.t?'-'+r.t:''}`;
 const pct = r => { const n=r.w+r.l+r.t; return n ? (r.w+r.t/2)/n : 0; };
 const pctStr = (r,d=1) => (r.w+r.l+r.t) ? (pct(r)*100).toFixed(d)+'%' : '—';
@@ -431,7 +432,7 @@ function vBoard(){
     <h1 class="title">${esc(isWeek?W.tab.name:W.tab.name.replace(/ round/i,''))}<span>Spread Picks</span></h1>
     <div class="sub">${n} guys. ${W.games.length} games. 1 winner.</div>
     <div class="card"><div class="board" style="--n:${n}">${head}${rows}</div></div>
-    <div class="legend"><span><i style="background:var(--gold)"></i>⚓ Anchor pick</span><span><i style="background:var(--win)"></i>Win</span><span><i style="background:var(--loss)"></i>Loss</span><span><i style="background:var(--push)"></i>Push</span><span><i style="background:repeating-linear-gradient(135deg,var(--win) 0 3px,#123 3px 6px)"></i>Striped = game in progress</span><span>Under each name: this week's record, then season record through this week</span></div>
+    <div class="legend"><span><i style="background:var(--gold)"></i>⚓ Anchor pick</span><span><i style="background:var(--win)"></i>Win</span><span><i style="background:var(--loss)"></i>Loss</span><span><i style="background:var(--push)"></i>Push</span><span><i style="background:repeating-linear-gradient(135deg,var(--win) 0 3px,#123 3px 6px)"></i>Striped = game in progress (not counted until final)</span><span>Under each name: this week's record, then season record through this week</span></div>
     <h2>Anchor Picks <small>one guy against the rest</small></h2>${anchorRows(W)}
     ${notes?`<h2>Notes</h2><div class="notes">${notes}</div>`:''}
     ${prev?`<h2>Last Week <small>${esc(prev.tab.name)}</small></h2>${recStrip(prev)}`:''}
@@ -456,7 +457,7 @@ function vSeason(){
     ${chart()}
     <h2>Week by Week <small>gold = won the week</small></h2>
     <div class="card tw"><table><tr><th class="pl">Week</th>${M.players.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>${wk}</table></div>
-    ${M.dec.some(w=>!w.complete)?'<div class="legend">* week still in progress — includes games being played right now</div>':''}`;
+    ${M.dec.some(w=>!w.complete)?'<div class="legend">* week still in progress — finished games only</div>':''}`;
 }
 function chart(){
   const M=S.model; if (M.dec.length<2) return '';
@@ -499,11 +500,11 @@ function vStats(){
       if (!st[i].worst || pct(r)<pct(st[i].worst.r)) st[i].worst={r,w:w.tab.short}; }); }
     for (const g of w.games){
       g.cells.forEach((c,i)=>{
-        if (c.res!=='W' && c.res!=='L') return;
-        const k=c.res==='W'?'w':'l'; if (!c.prov) runs[i].push(c.res);
+        if (c.prov || (c.res!=='W' && c.res!=='L')) return;
+        const k=c.res==='W'?'w':'l'; runs[i].push(c.res);
         if (c.pick){ st[i][c.pick===g.home?'home':'away'][k]++;
           if (g.spreadTeam && g.line!==0){ const fav = g.line<0 ? g.spreadTeam : g.other(g.spreadTeam); st[i][c.pick===fav?'fav':'dog'][k]++; } }
-        g.cells.forEach((d,j)=>{ if (j!==i && c.res==='W' && d.res==='L') h2h[i][j]++; });
+        g.cells.forEach((d,j)=>{ if (j!==i && c.res==='W' && d.res==='L' && !d.prov) h2h[i][j]++; });
       });
     }
   }
