@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#05080f">
+<title>The Pick Six Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05080f; --panel:#0c1220; --panel2:#111a2c; --line:#24304a; --text:#f2f4f8; --mute:#8d99b3;
+  --gold:#f5c542; --gold2:#b8862b; --win:#1f9d55; --loss:#c53030; --push:#5b6478; --live:#ff4d4d;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:
+    radial-gradient(60% 28% at 0% 0%, rgba(190,215,255,.20), transparent 70%),
+    radial-gradient(60% 28% at 100% 0%, rgba(190,215,255,.20), transparent 70%),
+    linear-gradient(180deg, #05080f 0%, #0a1222 55%, #0c2a18 100%);
+  background-attachment:fixed; background-color:var(--bg);
+  color:var(--text); font-family:"Barlow Condensed",system-ui,sans-serif; font-size:17px; font-weight:500;
+  min-height:100vh; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:860px; margin:0 auto; padding:10px 10px 60px}
+header.top{display:flex; align-items:center; gap:10px; padding:6px 2px 10px}
+.badge{flex:none; border:2px solid var(--gold); border-radius:10px; padding:4px 9px 3px; text-align:center; line-height:1; background:#0a0f1a}
+.badge small{display:block; font-size:10px; letter-spacing:.2em; color:var(--mute)}
+.badge b{font-family:Anton,sans-serif; font-weight:400; font-size:19px; letter-spacing:.03em; background:linear-gradient(180deg,#ffe58a,var(--gold2)); -webkit-background-clip:text; background-clip:text; color:transparent}
+.badge i{display:block; font-style:normal; font-size:10px; letter-spacing:.22em}
+.tag{flex:1; font-size:13px; letter-spacing:.14em; color:var(--mute); text-transform:uppercase; line-height:1.25}
+.status{font-size:13px; color:var(--mute); text-align:right; line-height:1.25}
+.status button{background:none; border:1px solid var(--line); color:var(--text); border-radius:6px; font:inherit; font-size:13px; padding:2px 8px; cursor:pointer}
+.livedot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--live); margin-right:5px; animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.25}}
+nav.tabs{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; position:sticky; top:0; z-index:5; padding:6px 0; background:linear-gradient(180deg,rgba(5,8,15,.97) 70%,transparent)}
+nav.tabs button{font:inherit; font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:15px; padding:9px 2px; color:var(--mute); background:var(--panel); border:1px solid var(--line); border-radius:8px; cursor:pointer}
+nav.tabs button.on{color:#111; background:linear-gradient(180deg,#ffe58a,var(--gold)); border-color:var(--gold)}
+.chips{display:flex; gap:6px; overflow-x:auto; padding:6px 0 8px; scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none; font:inherit; font-weight:700; font-size:14px; padding:5px 11px; border-radius:999px; background:var(--panel); color:var(--mute); border:1px solid var(--line); cursor:pointer}
+.chips button.on{color:#fff; border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold)}
+.chips button.cur::after{content:"•"; color:var(--gold); margin-left:4px}
+h1.title{font-family:Anton,sans-serif; font-weight:400; text-align:center; margin:8px 0 0; line-height:.95; font-size:clamp(40px,12vw,76px); letter-spacing:.02em; text-transform:uppercase; background:linear-gradient(180deg,#fff,#aeb6c6); -webkit-background-clip:text; background-clip:text; color:transparent}
+h1.title span{display:block; font-size:.62em; background:linear-gradient(180deg,#ffe58a,var(--gold2)); -webkit-background-clip:text; background-clip:text; color:transparent; transform:skew(-6deg)}
+.sub{text-align:center; letter-spacing:.3em; font-size:13px; margin:6px 0 12px; color:#d5dbe8; text-transform:uppercase}
+h2{font-family:Anton,sans-serif; font-weight:400; letter-spacing:.04em; font-size:22px; margin:22px 0 8px; color:var(--gold)}
+h2 small{font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:13px; letter-spacing:.14em; color:var(--mute); margin-left:8px; text-transform:uppercase}
+.card{background:rgba(12,18,32,.92); border:1px solid var(--line); border-radius:10px; overflow:clip}
+/* board */
+.board{display:grid; grid-template-columns:minmax(0,1.55fr) repeat(var(--n),minmax(0,1fr))}
+.board>div{border-bottom:1px solid var(--line); border-right:1px solid var(--line); min-width:0}
+.board>div:nth-child(5n){border-right:0}
+.bh{padding:6px 2px 5px; text-align:center; line-height:1.05; position:sticky; top:52px; z-index:3}
+.bh.g{background:#0a0f1a; color:var(--mute); font-size:12px; letter-spacing:.12em; display:flex; align-items:center; justify-content:center}
+.bh b{display:block; font-size:17px; letter-spacing:.04em; text-transform:uppercase}
+.bh span{display:block; font-size:16px; font-weight:700}
+.bh em{display:block; font-style:normal; font-size:11.5px; opacity:.8}
+.gm{padding:5px 6px; line-height:1.15}
+.gm .m{display:flex; align-items:center; gap:3px; font-weight:700; font-size:15px; white-space:nowrap}
+.gm .m i{font-style:normal; color:var(--mute); font-weight:500; font-size:12px; width:14px; flex:none}
+.gm .m img{width:17px; height:17px; flex:none; display:none}
+.gm .m u{text-decoration:none; color:var(--mute); font-weight:500; padding:0 1px}
+.gm .s{font-size:12.5px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-left:17px}
+.gm .s b{color:var(--gold); font-weight:700}
+.gm .s .lv{color:var(--live); font-weight:700}
+.gm .s .sc{color:var(--text); font-weight:600}
+.pk{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; padding:3px 1px; font-weight:700; font-size:14px; position:relative; line-height:1.05}
+.pk img{width:24px; height:24px}
+.pk.w{background:rgba(31,157,85,.38)} .pk.l{background:rgba(197,48,48,.36)} .pk.p{background:rgba(91,100,120,.4)}
+.pk.prov.w{background:repeating-linear-gradient(135deg,rgba(31,157,85,.30) 0 6px,rgba(31,157,85,.14) 6px 12px)}
+.pk.prov.l{background:repeating-linear-gradient(135deg,rgba(197,48,48,.30) 0 6px,rgba(197,48,48,.13) 6px 12px)}
+.pk.anc{box-shadow:inset 0 0 0 2px var(--gold)}
+.pk.anc.pend{background:var(--gold); color:#111}
+.pk.anc::after{content:"⚓"; position:absolute; top:1px; right:2px; font-size:9px; line-height:1}
+.pk .mk{font-size:20px} .pk .no{color:var(--mute); font-weight:500}
+.legend{display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12.5px; color:var(--mute); padding:8px 4px 0}
+.legend i{display:inline-block; width:11px; height:11px; border-radius:2px; vertical-align:-1px; margin-right:4px}
+/* lists */
+.alist{display:grid; gap:6px}
+.arow{display:flex; align-items:center; gap:8px; padding:7px 9px; background:rgba(12,18,32,.92); border:1px solid var(--line); border-left:4px solid var(--c); border-radius:8px}
+.arow img{width:26px; height:26px}
+.arow .who{font-weight:700; text-transform:uppercase; width:62px; flex:none}
+.arow .what{flex:1; min-width:0; line-height:1.1}
+.arow .what small{display:block; color:var(--mute); font-size:13px}
+.pill{font-weight:700; font-size:13px; padding:2px 8px; border-radius:999px; background:var(--push); white-space:nowrap}
+.pill.w{background:var(--win)} .pill.l{background:var(--loss)} .pill.pend{background:var(--gold); color:#111}
+.notes{display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.note{border:1px solid var(--line); border-radius:10px; padding:10px 12px; text-align:center; background:rgba(12,18,32,.92)}
+.note b{display:block; color:var(--gold); font-size:18px; letter-spacing:.04em}
+.note.lock{border:2px solid var(--gold); background:linear-gradient(180deg,#1a1508,#0c1220)}
+.note.lock .lk{font-family:Anton,sans-serif; font-size:24px; letter-spacing:.04em; background:linear-gradient(180deg,#ffe58a,var(--gold2)); -webkit-background-clip:text; background-clip:text; color:transparent}
+.note.lock img{width:44px; height:44px; margin:0 4px}
+.note.lock p{margin:2px 0 0; font-size:20px; font-weight:700; text-transform:uppercase}
+.strip{display:grid; grid-template-columns:repeat(var(--n),1fr); gap:6px}
+.strip div{border-radius:8px; overflow:hidden; text-align:center; background:var(--panel); border:1px solid var(--line)}
+.strip b{display:block; background:var(--c); padding:3px; text-transform:uppercase; letter-spacing:.05em}
+.strip span{display:block; font-size:21px; font-weight:700; padding-top:3px}
+.strip em{display:block; font-style:normal; font-size:12.5px; color:var(--mute); padding-bottom:4px}
+.byes{display:flex; justify-content:center; align-items:center; gap:10px; margin-top:14px; font-weight:700; color:var(--mute)}
+.byes img{width:22px; height:22px; vertical-align:-5px; margin-right:3px}
+.byes span{color:var(--text)}
+/* tables */
+.tw{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:17px}
+th,td{padding:8px 8px; border-bottom:1px solid var(--line); text-align:center; white-space:nowrap}
+th{font-size:12.5px; letter-spacing:.12em; color:var(--mute); font-weight:600; text-transform:uppercase; background:#0a0f1a}
+tr:last-child td{border-bottom:0}
+td.pl{text-align:left; font-weight:700; text-transform:uppercase; letter-spacing:.04em; background:linear-gradient(90deg,var(--c),transparent 130%); position:sticky; left:0}
+th.pl{text-align:left; position:sticky; left:0}
+td.rk{font-family:Anton,sans-serif; font-size:22px; color:var(--gold)}
+td.big{font-weight:700; font-size:20px}
+td.gold{color:var(--gold); font-weight:700}
+td.best{color:var(--gold); font-weight:700}
+.up{color:#3ddc84; font-size:13px} .dn{color:#ff6b6b; font-size:13px} .same{color:var(--mute)}
+.statg{display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.stat{background:rgba(12,18,32,.92); border:1px solid var(--line); border-top:3px solid var(--c); border-radius:8px; padding:8px 10px; line-height:1.2}
+.stat b{display:block; text-transform:uppercase; letter-spacing:.05em}
+.stat span{display:block; font-size:24px; font-weight:700}
+.stat small{color:var(--mute); font-size:13px}
+.tools{display:flex; justify-content:center; margin-top:18px}
+.tools button{font:inherit; font-weight:700; letter-spacing:.06em; text-transform:uppercase; font-size:14px; color:var(--gold); background:none; border:1px solid var(--gold2); border-radius:8px; padding:7px 14px; cursor:pointer}
+details.flags{margin-top:22px; border:1px solid var(--line); border-radius:10px; background:rgba(12,18,32,.92)}
+details.flags summary{padding:10px 12px; cursor:pointer; font-weight:700; letter-spacing:.05em}
+details.flags summary span{background:var(--loss); border-radius:999px; padding:1px 8px; margin-left:6px; font-size:14px}
+details.flags summary span.ok{background:var(--win)}
+details.flags ul{margin:0; padding:0 12px 12px 30px; color:#d5dbe8; font-size:16px}
+details.flags li{margin:4px 0} details.flags li b{color:var(--gold)}
+.msg{text-align:center; padding:40px 10px; color:var(--mute)}
+.foot{text-align:center; color:var(--mute); font-size:12.5px; letter-spacing:.2em; margin-top:26px; text-transform:uppercase}
+@media (min-width:640px){ body{font-size:19px} .gm .m{font-size:18px} .gm .m img{width:22px;height:22px;display:block} .gm .s{font-size:14px} .pk{font-size:16px; flex-direction:row; gap:6px} .pk img{width:28px;height:28px} .bh b{font-size:20px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="badge"><small>THE</small><b>PICK SIX</b><i>CHALLENGE</i></div>
+    <div class="tag">Same games.<br>Different takes.</div>
+    <div class="status" id="status">Loading…</div>
+  </header>
+  <nav class="tabs" id="tabs"></nav>
+  <main id="main"><div class="msg">Loading the sheet…</div></main>
+  <div id="flags"></div>
+  <div class="foot">Picks today. Bragging rights tomorrow.</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script>
+/* ============ CONFIG ============ */
+const CFG = {
+  sheetId: '1Vh0D0JtKJhK5nxYWz_RLdyAnPd9hOjsSkZZNKOa8zjI',
+  season: 2026,
+  // One entry per sheet tab. gid is the number after "gid=" in the tab's URL.
+  // st/wk = ESPN season type (2 regular, 3 playoffs) and week. Add the Super Bowl tab's gid when it exists.
+  tabs: [
+    ['Week 1','W1',161489754,2,1],['Week 2','W2',426171107,2,2],['Week 3','W3',1231030784,2,3],
+    ['Week 4','W4',1366098916,2,4],['Week 5','W5',1988465146,2,5],['Week 6','W6',1161483042,2,6],
+    ['Week 7','W7',1488687028,2,7],['Week 8','W8',1302717225,2,8],['Week 9','W9',20322058,2,9],
+    ['Week 10','W10',1437312505,2,10],['Week 11','W11',1379617037,2,11],['Week 12','W12',610686219,2,12],
+    ['Week 13','W13',515155183,2,13],['Week 14','W14',1133123324,2,14],['Week 15','W15',465292146,2,15],
+    ['Week 16','W16',75734254,2,16],['Week 17','W17',1024640842,2,17],['Week 18','W18',2137234146,2,18],
+    ['Wild Card Round','WC',1395068128,3,1],['Divisional Round','DIV',181836670,3,2],
+    ['Championship round','CONF',1455391620,3,3],
+    // ['Super Bowl','SB',<gid>,3,5],
+  ].map(([name,short,gid,st,wk])=>({name,short,gid,st,wk})),
+  colors: {AMI:'#c62828', SCHUCK:'#1e56c9', SHAYA:'#1b8a4b', WEX:'#7b3fc4'},
+  fallbackColors: ['#c62828','#1e56c9','#1b8a4b','#7b3fc4','#c2410c','#0e7490'],
+  // Picks the sheet can no longer tell us (pushes), taken from the original weekly graphic.
+  knownPicks: {'Week 4|LAC@SEA|AMI':'SEA','Week 4|LAC@SEA|SCHUCK':'LAC','Week 4|LAC@SEA|SHAYA':'SEA','Week 4|LAC@SEA|WEX':'LAC'},
+};
+
+/* ============ HELPERS ============ */
+const TEAMS = new Set('ARI ATL BAL BUF CAR CHI CIN CLE DAL DEN DET GB HOU IND JAX KC LAC LAR LV MIA MIN NE NO NYG NYJ PHI PIT SEA SF TB TEN WAS'.split(' '));
+const ALIAS = {WSH:'WAS',JAC:'JAX',LA:'LAR',OAK:'LV',LVR:'LV',SD:'LAC',GNB:'GB',KAN:'KC',NWE:'NE',NOR:'NO',SFO:'SF',TAM:'TB'};
+const norm = a => { a=(a||'').trim().toUpperCase(); return ALIAS[a]||a; };
+const logo = a => `https://a.espncdn.com/combiner/i?img=/i/teamlogos/nfl/500/${(a==='WAS'?'wsh':a).toLowerCase()}.png&h=96&w=96`;
+const img = a => TEAMS.has(a) ? `<img src="${logo(a)}" alt="" crossorigin="anonymous" loading="lazy">` : '';
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const gkey = (a,b) => [a,b].sort().join('-');
+const fmtLine = n => n===0 ? 'PK' : (n>0?'+':'')+(Number.isInteger(n)?n:n.toFixed(1));
+const rec0 = () => ({w:0,l:0,t:0,lw:0,ll:0,lt:0});
+const addRec = (a,b) => { for (const k in b) a[k]+=b[k]; return a; };
+const tot = (r,live=true) => live ? {w:r.w+r.lw,l:r.l+r.ll,t:r.t+r.lt} : {w:r.w,l:r.l,t:r.t};
+const recStr = r => `${r.w}-${r.l}${r.t?'-'+r.t:''}`;
+const pct = r => { const n=r.w+r.l+r.t; return n ? (r.w+r.t/2)/n : 0; };
+const pctStr = (r,d=1) => (r.w+r.l+r.t) ? (pct(r)*100).toFixed(d)+'%' : '—';
+const ls = { get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+             set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
+
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', q=false;
+  for (let i=0;i<text.length;i++){
+    const c=text[i];
+    if (q){ if (c==='"'){ if (text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if (c==='"') q=true;
+    else if (c===','){ row.push(cur); cur=''; }
+    else if (c==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+    else if (c!=='\r') cur+=c;
+  }
+  row.push(cur); rows.push(row);
+  return rows;
+}
+
+/* ============ STATE ============ */
+const S = { sheets:{}, espn:{}, espnOk:{}, view:ls.get('p6:view','board'), wk:null, cur:null, model:null, updated:null, err:null };
+let MEM = Object.assign({}, CFG.knownPicks, ls.get('p6:picks',{}));
+
+/* ============ LOADING ============ */
+async function loadSheet(tab){
+  const r = await fetch(`https://docs.google.com/spreadsheets/d/${CFG.sheetId}/export?format=csv&gid=${tab.gid}&_=${Date.now()}`);
+  if (!r.ok) throw new Error('sheet '+r.status);
+  S.sheets[tab.name] = parseSheet(tab, parseCSV(await r.text()));
+}
+
+function parseSheet(tab, rows){
+  const head = rows[0]||[];
+  const players=[]; let c=2;
+  while (c<head.length && head[c].trim()) { players.push(head[c].trim()); c++; }
+  const noteCol = 2+players.length;
+  const out = {tab, players, games:[], byes:[], flags:[]};
+  for (const row of rows) for (const cell of row){
+    const m = /^\s*byes?\s*:\s*(.+)$/i.exec(cell||''); if (m) out.byes = m[1].split(/[,\s]+/).map(norm).filter(Boolean);
+  }
+  rows.slice(1).forEach((row,ri)=>{
+    const m = /^\s*([A-Za-z]{2,3})\s*(?:@|vs\.?|at)\s*([A-Za-z]{2,3})\s*$/i.exec(row[0]||'');
+    if (!m){
+      if ((row[0]||'').trim() && players.some((p,i)=>(row[2+i]||'').trim())) out.flags.push(`Row ${ri+2}: can't read the game "${row[0].trim()}"`);
+      return;
+    }
+    const g = {away:norm(m[1]), home:norm(m[2]), spreadRaw:(row[1]||'').trim(), spreadTeam:null, line:null,
+               raw:players.map((p,i)=>(row[2+i]||'').trim()), note:(row[noteCol]||'').trim()};
+    g.label = `${g.away} @ ${g.home}`;
+    for (const t of [g.away,g.home]) if (!TEAMS.has(t)) out.flags.push(`${g.label}: "${t}" isn't a team abbreviation I know`);
+    if (g.spreadRaw){
+      const s = /^([A-Za-z]{2,3})\s*(pk|pick(?:'?em)?|even|[+-]?\s*\d+(?:\.\d+)?)$/i.exec(g.spreadRaw);
+      if (!s) out.flags.push(`${g.label}: can't read the spread "${g.spreadRaw}"`);
+      else {
+        g.spreadTeam = norm(s[1]);
+        g.line = /^\d|^[+-]/.test(s[2]) ? parseFloat(s[2].replace(/\s/g,'')) : 0;
+        if (/^\d/.test(s[2])) g.line = -g.line; // "DAL 3.5" with no sign: assume favorite
+        if (g.spreadTeam!==g.away && g.spreadTeam!==g.home){ out.flags.push(`${g.label}: spread team "${g.spreadTeam}" isn't in this game`); g.spreadTeam=null; g.line=null; }
+      }
+    }
+    out.games.push(g);
+  });
+  return out;
+}
+
+async function loadESPN(tab, force){
+  const ck = `p6:espn:${CFG.season}:${tab.st}:${tab.wk}`;
+  if (!force){ const c = ls.get(ck,null); if (c){ S.espn[tab.name]=c; S.espnOk[tab.name]=true; return; } }
+  try{
+    const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${CFG.season}&seasontype=${tab.st}&week=${tab.wk}`);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json(), map={};
+    for (const ev of d.events||[]){
+      const c = ev.competitions[0], t = c.competitors.map(x=>({a:norm(x.team.abbreviation), s:+x.score||0}));
+      map[gkey(t[0].a,t[1].a)] = {sc:{[t[0].a]:t[0].s,[t[1].a]:t[1].s}, state:c.status.type.state, detail:c.status.type.shortDetail, date:ev.date};
+    }
+    S.espn[tab.name]=map; S.espnOk[tab.name]=true;
+    const all = Object.values(map);
+    if (all.length && all.every(e=>e.state==='post')) ls.set(ck,map);
+  }catch(e){ if (!S.espn[tab.name]) { S.espn[tab.name]={}; S.espnOk[tab.name]=false; } }
+}
+
+/* ============ GRADING ============ */
+function computeWeek(sh){
+  const tab=sh.tab, E=S.espn[tab.name]||{}, espnOk=!!S.espnOk[tab.name] && Object.keys(E).length>0;
+  const flags = sh.flags.slice(), n = sh.players.length;
+  const numericWeek = sh.games.some(g=>g.raw.some(r=>r==='1'||r==='0'));
+  const games = sh.games.map((g,gi)=>{
+    const e = E[gkey(g.away,g.home)] || null;
+    if (espnOk && !e && TEAMS.has(g.away) && TEAMS.has(g.home)) flags.push(`${g.label}: no such game on the NFL schedule this week — check the matchup`);
+    const other = t => t===g.away ? g.home : g.away;
+    // who is covering right now (or covered, if final)
+    let cover=null;
+    if (e && e.state!=='pre' && g.spreadTeam){
+      const d = e.sc[g.spreadTeam] - e.sc[other(g.spreadTeam)] + g.line;
+      cover = d>0 ? g.spreadTeam : d<0 ? other(g.spreadTeam) : 'PUSH';
+    }
+    const fin = !!e && e.state==='post';
+    const anyEntry = g.raw.some(r=>r);
+    if (anyEntry && !g.spreadRaw) flags.push(`${g.label}: picks are in but there's no spread`);
+    const cells = g.raw.map((raw,pi)=>{
+      const P = sh.players[pi], mk = `${tab.name}|${g.away}@${g.home}|${P.toUpperCase()}`, up = raw.toUpperCase();
+      const c = {raw, pick:null, res:null, prov:false, src:null};
+      if (up==='1' || up==='0'){
+        c.res = up==='1' ? 'W' : 'L'; c.src='sheet';
+        if (MEM[mk]) c.pick = MEM[mk];
+        else if (fin && cover && cover!=='PUSH') c.pick = up==='1' ? cover : other(cover);
+        if (fin && cover==='PUSH') flags.push(`${g.label}: ${P} has a ${up} but the final score makes this a push`);
+        else if (fin && cover && MEM[mk] && (MEM[mk]===cover) !== (up==='1'))
+          flags.push(`${g.label}: ${P} picked ${MEM[mk]} and the sheet says ${up}, but the final score says ${MEM[mk]===cover?'win':'loss'} — using the sheet`);
+      } else if (up==='P' || up==='PUSH' || up==='0.5' || up==='.5' || up==='T' || up==='TIE'){
+        c.res='P'; c.src='sheet'; if (MEM[mk]) c.pick=MEM[mk];
+      } else if (up){
+        const t = norm(up);
+        if (t!==g.away && t!==g.home) flags.push(`${g.label}: ${P}'s pick "${raw}" isn't one of the two teams`);
+        else {
+          c.pick=t; if (MEM[mk]!==t){ MEM[mk]=t; memDirty=true; }
+          if (cover){ c.res = cover==='PUSH' ? 'P' : (t===cover?'W':'L'); c.prov = !fin; c.src='score'; }
+        }
+      } else {
+        if (MEM[mk]) c.pick = MEM[mk];
+        if (g.spreadTeam && fin && cover==='PUSH'){ c.res='P'; c.src='score'; }
+        else if (g.spreadTeam && !espnOk && numericWeek && !anyEntry){ c.res='P'; c.src='sheet'; }
+        else if (g.spreadTeam && fin && numericWeek && !anyEntry){ flags.push(`${g.label}: ${P} is blank but the final score isn't a push — not counted`); }
+        else if (anyEntry) flags.push(`${g.label}: ${P} has no pick`);
+      }
+      return c;
+    });
+    // anchor: exactly one player alone against everyone else
+    let anchor=null;
+    let sides = cells.map(c=>c.pick);
+    if (sides.some(s=>!s)) sides = g.raw.every(r=>r==='1'||r==='0') ? g.raw : null;
+    if (sides && n>=3){
+      const groups={}; sides.forEach((s,i)=>(groups[s]=groups[s]||[]).push(i));
+      const ks=Object.keys(groups);
+      if (ks.length===2){ const lone = ks.find(k=>groups[k].length===1 && n-1>=2); if (lone!==undefined) anchor = groups[lone][0]; }
+    }
+    return Object.assign({}, g, {i:gi, e, cover, fin, cells, anchor, other});
+  });
+  if (espnOk) for (const k in E) if (!sh.games.some(g=>gkey(g.away,g.home)===k)) flags.push(`${k.replace('-',' vs ')} is on the NFL schedule this week but isn't in the sheet`);
+  const recs = sh.players.map(()=>rec0()), anc = sh.players.map(()=>rec0());
+  let pending=0, live=false;
+  for (const g of games){
+    if (g.e && g.e.state==='in') live=true;
+    g.cells.forEach((c,pi)=>{
+      if (!c.res){ pending++; return; }
+      const k = (c.prov?'l':'') + (c.res==='W'?'w':c.res==='L'?'l':'t');
+      recs[pi][k]++;
+      if (g.anchor===pi && c.res!=='P') anc[pi][k]++;
+    });
+  }
+  const decided = recs.some(r=>r.w+r.l+r.t+r.lw+r.ll+r.lt>0);
+  const hasEntries = sh.games.some(g=>g.spreadRaw || g.raw.some(r=>r));
+  const over = espnOk ? games.every(g=>g.e && g.e.state==='post') : (decided && pending===0);
+  return {tab, players:sh.players, games, byes:sh.byes, flags:[...new Set(flags)], recs, anc, live, decided, hasEntries, over,
+          complete: decided && pending===0 && !recs.some(r=>r.lw+r.ll+r.lt>0)};
+}
+
+let memDirty=false;
+function compute(){
+  const allWeeks = CFG.tabs.map(t=>S.sheets[t.name]).filter(sh=>sh && sh.games.length).map(computeWeek);
+  // future weeks stay hidden until every game of the week before is final
+  const firstOpen = allWeeks.findIndex(w=>!w.over);
+  const weeks = firstOpen<0 ? allWeeks : allWeeks.slice(0, firstOpen+1);
+  if (memDirty){ const save={}; for (const k in MEM) if (!(k in CFG.knownPicks)) save[k]=MEM[k]; ls.set('p6:picks',save); memDirty=false; }
+  const players = weeks.length ? weeks[0].players : [];
+  const withEntries = weeks.filter(w=>w.hasEntries);
+  S.cur = (withEntries[withEntries.length-1] || weeks[0] || {tab:{name:null}}).tab.name;
+  if (!S.wk || !weeks.some(w=>w.tab.name===S.wk)) S.wk = S.cur;
+  const sum = (ws,key) => players.map((p,i)=>ws.reduce((a,w)=>addRec(a,w[key][i]||rec0()),rec0()));
+  const dec = weeks.filter(w=>w.decided);
+  S.model = {players, weeks, allWeeks, dec, season:sum(dec,'recs'), prev:sum(dec.slice(0,-1),'recs'), anc:sum(dec,'anc'),
+             live:weeks.some(w=>w.live)};
+}
+const color = (p,i) => CFG.colors[p.toUpperCase()] || CFG.fallbackColors[i%CFG.fallbackColors.length];
+function standings(recs){
+  const M=S.model, rows = M.players.map((p,i)=>({p,i,r:tot(recs[i])})).sort((a,b)=>pct(b.r)-pct(a.r)||b.r.w-a.r.w||a.i-b.i);
+  rows.forEach((x,k)=>{ x.rank = k && Math.abs(pct(rows[k-1].r)-pct(x.r))<1e-9 ? rows[k-1].rank : k+1; });
+  rows.forEach(x=>{ x.tied = rows.filter(y=>y.rank===x.rank).length>1; });
+  return rows;
+}
+
+/* ============ RENDER ============ */
+const $ = id => document.getElementById(id);
+const lastHTML = {};
+function setHTML(id, h){ if (lastHTML[id]!==h){ lastHTML[id]=h; $(id).innerHTML=h; } }
+function render(){
+  const M=S.model;
+  $('tabs').innerHTML = [['board','This Week'],['season','Season'],['anchors','Anchors'],['stats','Stats']]
+    .map(([k,l])=>`<button data-view="${k}" class="${S.view===k?'on':''}">${l}</button>`).join('');
+  const t = S.updated ? S.updated.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) : '';
+  $('status').innerHTML = `${M&&M.live?'<span class="livedot"></span>LIVE<br>':''}${S.err?esc(S.err)+'<br>':''}${t?'Updated '+t+' ':''}<button data-act="refresh">↻</button>`;
+  if (!M || !M.weeks.length){ $('main').innerHTML = `<div class="msg">${S.err?'Could not load the sheet.':'No games found in the sheet yet.'}</div>`; return; }
+  setHTML('main', ({board:vBoard, season:vSeason, anchors:vAnchors, stats:vStats}[S.view]||vBoard)()
+    + `<div class="tools"><button data-act="save">Save as image</button></div>`);
+  const fl = M.weeks.flatMap(/* hidden future weeks are not checked */w=>w.flags.map(f=>`<li><b>${esc(w.tab.name)}</b> — ${esc(f)}</li>`));
+  $('flags').innerHTML = `<details class="flags"><summary>Sheet check <span class="${fl.length?'':'ok'}">${fl.length||'✓'}</span></summary><ul>${fl.join('')||'<li>Nothing looks off in the sheet.</li>'}</ul></details>`;
+}
+
+function gameStatus(g){
+  const e=g.e; if (!e) return '';
+  if (e.state==='pre') return esc(new Date(e.date).toLocaleString([], {weekday:'short',hour:'numeric',minute:'2-digit'}));
+  const sc = `<span class="sc">${e.sc[g.away]}–${e.sc[g.home]}</span>`;
+  return e.state==='in' ? `${sc} <span class="lv">${esc(e.detail)}</span>` : `${sc} ${esc(e.detail)}`;
+}
+function pickCell(g,c,pi){
+  const cls = ['pk']; if (c.res) cls.push(c.res.toLowerCase()); if (c.prov) cls.push('prov');
+  if (g.anchor===pi){ cls.push('anc'); if (!c.res) cls.push('pend'); }
+  const body = c.pick ? `${img(c.pick)}<span>${c.pick}</span>` : c.res ? `<span class="mk">${c.res==='W'?'✓':c.res==='L'?'✗':'='}</span>` : `<span class="no">—</span>`;
+  return `<div class="${cls.join(' ')}">${body}</div>`;
+}
+function anchorRows(W){
+  const rows = W.games.filter(g=>g.anchor!==null).map(g=>{
+    const pi=g.anchor, c=g.cells[pi], p=W.players[pi], t=c.pick;
+    const ln = t && g.spreadTeam ? fmtLine(t===g.spreadTeam?g.line:-g.line) : '';
+    const st = !c.res ? ['pend','Pending'] : c.res==='P' ? ['','Push'] : c.prov ? [c.res.toLowerCase(), c.res==='W'?'Covering':'Not covering'] : [c.res.toLowerCase(), c.res==='W'?'Hit':'Miss'];
+    return `<div class="arow" style="--c:${color(p,pi)}"><span class="who">${esc(p)}</span>${t?img(t):''}
+      <span class="what">${t?`<b>${t} ${ln}</b>`:'<b>Alone on this one</b>'}<small>${esc(g.label)} · vs. the other ${W.players.length-1}${g.e&&g.e.state!=='pre'?` · ${g.e.sc[g.away]}–${g.e.sc[g.home]}`:''}</small></span>
+      <span class="pill ${st[0]}">${st[1]}</span></div>`;
+  });
+  return rows.length ? `<div class="alist">${rows.join('')}</div>` : `<div class="msg" style="padding:14px">No anchor picks ${W.hasEntries?'this week':'yet'}.</div>`;
+}
+function recStrip(W){
+  const order = W.players.map((p,i)=>({p,i,r:tot(W.recs[i])})).sort((a,b)=>pct(b.r)-pct(a.r)||a.i-b.i);
+  return `<div class="strip" style="--n:${W.players.length}">${order.map(x=>`<div style="--c:${color(x.p,x.i)}"><b>${esc(x.p)}</b><span>${recStr(x.r)}</span><em>${pctStr(x.r)}</em></div>`).join('')}</div>`;
+}
+
+function vBoard(){
+  const M=S.model, W=M.weeks.find(w=>w.tab.name===S.wk), n=W.players.length, wi=M.weeks.indexOf(W);
+  const chips = M.weeks.map(w=>`<button data-wk="${esc(w.tab.name)}" class="${w.tab.name===S.wk?'on':''} ${w.tab.name===S.cur?'cur':''}">${w.tab.short}</button>`).join('');
+  const head = `<div class="bh g">GAME · SPREAD</div>` + W.players.map((p,i)=>{
+    const r=tot(W.recs[i]), s=tot(M.weeks.slice(0,wi+1).reduce((a,w)=>addRec(a,w.recs[i]),rec0()));
+    return `<div class="bh" style="background:${color(p,i)}"><b>${esc(p)}</b><span>${W.decided?recStr(r):'–'}</span><em>${recStr(s)}</em></div>`; }).join('');
+  const rows = W.games.map((g,gi)=>`<div class="gm"><div class="m"><i>${gi+1}</i>${img(g.away)}${g.away}<u>@</u>${g.home}${img(g.home)}</div>
+      <div class="s">${g.spreadTeam?`<b>${g.spreadTeam} ${fmtLine(g.line)}</b>`:g.spreadRaw?`<b>${esc(g.spreadRaw)}</b>`:'No line yet'}</div>${g.e?`<div class="s">${gameStatus(g)}</div>`:''}</div>`
+      + g.cells.map((c,pi)=>pickCell(g,c,pi)).join('')).join('');
+  const notes = W.games.filter(g=>g.note).map(g=>{
+    const m = /lock of the week/i.exec(g.note);
+    if (m){ const rest = g.note.replace(/lock of the week/ig,'').replace(/^[\s,:-]+|[\s,:-]+$/g,'');
+      return `<div class="note lock">${img(g.away)}${img(g.home)}<div class="lk">LOCK OF THE WEEK</div>${rest?`<p>${esc(rest)}</p>`:''}<div>${esc(g.label)}${g.spreadTeam?` · ${g.spreadTeam} ${fmtLine(g.line)}`:''}</div></div>`; }
+    return `<div class="note"><b>${esc(g.label)}</b>${esc(g.note)}</div>`; }).join('');
+  const prev =M.weeks.slice(0,wi).reverse().find(w=>w.decided);
+  const isWeek = /^week/i.test(W.tab.name);
+  return `<div class="chips">${chips}</div>
+    <h1 class="title">${esc(isWeek?W.tab.name:W.tab.name.replace(/ round/i,''))}<span>Spread Picks</span></h1>
+    <div class="sub">${n} guys. ${W.games.length} games. 1 winner.</div>
+    <div class="card"><div class="board" style="--n:${n}">${head}${rows}</div></div>
+    <div class="legend"><span><i style="background:var(--gold)"></i>⚓ Anchor pick</span><span><i style="background:var(--win)"></i>Win</span><span><i style="background:var(--loss)"></i>Loss</span><span><i style="background:var(--push)"></i>Push</span><span><i style="background:repeating-linear-gradient(135deg,var(--win) 0 3px,#123 3px 6px)"></i>Striped = game in progress</span><span>Under each name: this week's record, then season record through this week</span></div>
+    <h2>Anchor Picks <small>one guy against the rest</small></h2>${anchorRows(W)}
+    ${notes?`<h2>Notes</h2><div class="notes">${notes}</div>`:''}
+    ${prev?`<h2>Last Week <small>${esc(prev.tab.name)}</small></h2>${recStrip(prev)}`:''}
+    ${W.byes.length?`<div class="byes">BYES: ${W.byes.map(b=>`<span>${img(b)}${esc(b)}</span>`).join('')}</div>`:''}`;
+}
+
+function vSeason(){
+  const M=S.model, now=standings(M.season), before=standings(M.prev), last=M.dec[M.dec.length-1];
+  if (!last) return `<div class="msg">No results yet.</div>`;
+  const lead=now[0].r;
+  const rows = now.map(x=>{
+    const b = before.find(y=>y.i===x.i), had = M.dec.length>1, d = had ? b.rank-x.rank : 0;
+    const mv = !had||d===0 ? '<span class="same">–</span>' : d>0 ? `<span class="up">▲${d}</span>` : `<span class="dn">▼${-d}</span>`;
+    const gb = ((lead.w-x.r.w)+(x.r.l-lead.l))/2;
+    return `<tr><td class="rk">${x.tied?'T-':''}${x.rank}</td><td>${mv}</td><td class="pl" style="--c:${color(x.p,x.i)}">${esc(x.p)}</td><td class="big">${recStr(x.r)}</td><td class="gold">${pctStr(x.r,2)}</td><td>${gb?gb:'–'}</td></tr>`; }).join('');
+  const wk = M.dec.map(w=>{
+    const rs = w.recs.map(r=>tot(r)), best = Math.max(...rs.map(pct));
+    return `<tr><td class="pl" style="--c:#1a2540">${w.tab.short}${w.complete?'':' <span class="same">*</span>'}</td>${rs.map(r=>`<td class="${pct(r)===best?'best':''}">${recStr(r)}</td>`).join('')}</tr>`; }).join('');
+  return `<h1 class="title">Season<span>Standings</span></h1>
+    <div class="sub">Through ${esc(last.tab.name)}${last.complete?'':' (in progress)'} · ${M.players.length} guys. One champion.</div>
+    <div class="card tw"><table><tr><th>Rank</th><th></th><th class="pl">Player</th><th>Record</th><th>Win %</th><th>GB</th></tr>${rows}</table></div>
+    ${chart()}
+    <h2>Week by Week <small>gold = won the week</small></h2>
+    <div class="card tw"><table><tr><th class="pl">Week</th>${M.players.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>${wk}</table></div>
+    ${M.dec.some(w=>!w.complete)?'<div class="legend">* week still in progress — includes games being played right now</div>':''}`;
+}
+function chart(){
+  const M=S.model; if (M.dec.length<2) return '';
+  const series = M.players.map((p,i)=>{ let v=0; return [0,...M.dec.map(w=>{ const r=tot(w.recs[i]); return v+=r.w-r.l; })]; });
+  const all=series.flat(), lo=Math.min(...all,-1), hi=Math.max(...all,1), Wd=600, H=200, px=34, py=16;
+  const x=k=>px+(Wd-px-56)*k/M.dec.length, y=v=>py+(H-2*py)*(hi-v)/(hi-lo);
+  const lines = series.map((s,i)=>`<polyline fill="none" stroke="${color(M.players[i],i)}" stroke-width="3" stroke-linejoin="round" points="${s.map((v,k)=>`${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}"/>`
+    +`<circle cx="${x(s.length-1)}" cy="${y(s[s.length-1])}" r="4" fill="${color(M.players[i],i)}"/>`).join('');
+  // nudge end labels apart
+  const ends = series.map((s,i)=>({i,y:y(s[s.length-1])})).sort((a,b)=>a.y-b.y);
+  for (let k=1;k<ends.length;k++) if (ends[k].y-ends[k-1].y<13) ends[k].y=ends[k-1].y+13;
+  const labels = ends.map(e=>`<text x="${x(M.dec.length)+8}" y="${e.y+4}" fill="${color(M.players[e.i],e.i)}" font-size="13" font-weight="700" style="filter:brightness(1.6)">${esc(M.players[e.i].toUpperCase())}</text>`).join('');
+  const ticks = M.dec.map((w,k)=>`<text x="${x(k+1)}" y="${H-1}" fill="#8d99b3" font-size="11" text-anchor="middle">${w.tab.short}</text>`).join('');
+  return `<h2>The Race <small>games above / below .500</small></h2><div class="card" style="padding:8px 4px 4px"><svg viewBox="0 0 ${Wd} ${H}" width="100%" role="img" aria-label="Wins minus losses by week">
+    <line x1="${px}" x2="${Wd-56}" y1="${y(0)}" y2="${y(0)}" stroke="#3a4868" stroke-dasharray="4 4"/>
+    <text x="${px-6}" y="${y(0)+4}" fill="#8d99b3" font-size="11" text-anchor="end">.500</text>
+    <text x="${px-6}" y="${y(hi)+4}" fill="#8d99b3" font-size="11" text-anchor="end">+${hi}</text>
+    <text x="${px-6}" y="${y(lo)+4}" fill="#8d99b3" font-size="11" text-anchor="end">${lo}</text>${lines}${labels}${ticks}</svg></div>`;
+}
+
+function vAnchors(){
+  const M=S.model, W=M.weeks.find(w=>w.tab.name===S.cur);
+  const order = M.players.map((p,i)=>({p,i,r:tot(M.anc[i])})).sort((a,b)=>pct(b.r)-pct(a.r)||b.r.w-a.r.w);
+  const rows = order.map(x=>`<tr><td class="pl" style="--c:${color(x.p,x.i)}">${esc(x.p)}</td>${M.dec.map(w=>`<td>${recStr(tot(w.anc[x.i])).replace(/^0-0$/,'<span class="same">0-0</span>')}</td>`).join('')}<td class="gold big">${recStr(x.r)}</td><td class="gold">${pctStr(x.r)}</td></tr>`).join('');
+  return `<h1 class="title">Anchor<span>Picks</span></h1>
+    <div class="sub">One guy against the other ${M.players.length-1} · Yellow picks only</div>
+    <div class="card tw"><table><tr><th class="pl">Player</th>${M.dec.map(w=>`<th>${w.tab.short}</th>`).join('')}<th>Total</th><th>Win %</th></tr>${rows}</table></div>
+    <h2>Anchors of the Week <small>${esc(W.tab.name)}</small></h2>${anchorRows(W)}`;
+}
+
+function vStats(){
+  const M=S.model, P=M.players, n=P.length;
+  const st = P.map(()=>({weeksWon:0,best:null,worst:null,streak:'',fav:rec0(),dog:rec0(),home:rec0(),away:rec0(),crowd:rec0()}));
+  const h2h = P.map(()=>P.map(()=>0));
+  const runs = P.map(()=>[]);
+  for (const w of M.dec){
+    const rs=w.recs.map(r=>tot(r));
+    if (w.complete){ const best=Math.max(...rs.map(pct)); rs.forEach((r,i)=>{ if (pct(r)===best) st[i].weeksWon++;
+      if (!st[i].best || pct(r)>pct(st[i].best.r)) st[i].best={r,w:w.tab.short};
+      if (!st[i].worst || pct(r)<pct(st[i].worst.r)) st[i].worst={r,w:w.tab.short}; }); }
+    for (const g of w.games){
+      g.cells.forEach((c,i)=>{
+        if (c.res!=='W' && c.res!=='L') return;
+        const k=c.res==='W'?'w':'l'; if (!c.prov) runs[i].push(c.res);
+        if (c.pick){ st[i][c.pick===g.home?'home':'away'][k]++;
+          if (g.spreadTeam && g.line!==0){ const fav = g.line<0 ? g.spreadTeam : g.other(g.spreadTeam); st[i][c.pick===fav?'fav':'dog'][k]++; } }
+        g.cells.forEach((d,j)=>{ if (j!==i && c.res==='W' && d.res==='L') h2h[i][j]++; });
+      });
+    }
+  }
+  runs.forEach((r,i)=>{ if (!r.length) return; let k=r.length-1; while (k>0 && r[k-1]===r[r.length-1]) k--; st[i].streak = r[r.length-1]+(r.length-k); });
+  const card = (title, fn, small) => `<h2>${title}${small?` <small>${small}</small>`:''}</h2><div class="statg">${P.map((p,i)=>`<div class="stat" style="--c:${color(p,i)}"><b>${esc(p)}</b>${fn(st[i],i)}</div>`).join('')}</div>`;
+  const r2 = (r) => `<span>${recStr(r)}</span><small>${pctStr(r)}</small>`;
+  const hrows = P.map((p,i)=>`<tr><td class="pl" style="--c:${color(p,i)}">${esc(p)}</td>${P.map((q,j)=>i===j?'<td class="same">—</td>':`<td class="${h2h[i][j]>h2h[j][i]?'best':''}">${h2h[i][j]}-${h2h[j][i]}</td>`).join('')}</tr>`).join('');
+  return `<h1 class="title">Bragging<span>Rights</span></h1><div class="sub">Trash talk, backed by numbers</div>
+    ${card('Weeks Won', s=>`<span>${s.weeksWon}</span><small>outright or tied for best</small>`, 'finished weeks')}
+    ${card('Current Streak', s=>`<span>${s.streak||'—'}</span><small>consecutive picks</small>`)}
+    ${card('Best Week', s=>s.best?`<span>${recStr(s.best.r)}</span><small>${s.best.w}</small>`:'<span>—</span>')}
+    ${card('Worst Week', s=>s.worst?`<span>${recStr(s.worst.r)}</span><small>${s.worst.w}</small>`:'<span>—</span>')}
+    ${card('Taking the Favorite', s=>r2(s.fav), 'laying the points')}
+    ${card('Taking the Underdog', s=>r2(s.dog), 'getting the points')}
+    ${card('Picking the Home Team', s=>r2(s.home))}
+    ${card('Picking the Road Team', s=>r2(s.away))}
+    <h2>Head to Head <small>when two of you disagree · row vs column</small></h2>
+    <div class="card tw"><table><tr><th class="pl"></th>${P.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>${hrows}</table></div>`;
+}
+
+/* ============ EVENTS / REFRESH ============ */
+document.addEventListener('click', async ev=>{
+  const b = ev.target.closest('button'); if (!b) return;
+  if (b.dataset.view){ S.view=b.dataset.view; ls.set('p6:view',S.view); render(); window.scrollTo(0,0); }
+  else if (b.dataset.wk){ S.wk=b.dataset.wk; render(); }
+  else if (b.dataset.act==='refresh'){ b.textContent='…'; await refresh(true); }
+  else if (b.dataset.act==='save') saveImage(b);
+});
+async function saveImage(btn){
+  if (!window.html2canvas) return alert('Image tool is still loading — try again in a second.');
+  const old=btn.textContent; btn.textContent='Rendering…';
+  try{
+    document.querySelectorAll('.chips,.tools').forEach(e=>e.style.visibility='hidden');
+    const canvas = await html2canvas($('main'), {backgroundColor:'#070b14', useCORS:true, scale:2});
+    document.querySelectorAll('.chips,.tools').forEach(e=>e.style.visibility='');
+    const blob = await new Promise(r=>canvas.toBlob(r,'image/png')), name = `pick-six-${S.view}-${(S.wk||'').replace(/\s+/g,'-').toLowerCase()}.png`;
+    const file = new File([blob], name, {type:'image/png'});
+    if (navigator.canShare && navigator.canShare({files:[file]})) { try{ await navigator.share({files:[file]}); }catch(e){} }
+    else { const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); }
+  }catch(e){ document.querySelectorAll('.chips,.tools').forEach(e=>e.style.visibility=''); alert('Could not make the image — a screenshot will work instead.'); }
+  btn.textContent=old;
+}
+
+const withGames = () => CFG.tabs.filter(t=>S.sheets[t.name] && S.sheets[t.name].games.length);
+async function refresh(full){
+  try{
+    const cur = CFG.tabs.filter(t=>t.name===S.cur || t.name===S.wk);
+    const idx = CFG.tabs.findIndex(t=>t.name===S.cur);
+    if (idx>=0 && CFG.tabs[idx+1]) cur.push(CFG.tabs[idx+1]);
+    const res = await Promise.allSettled((full?CFG.tabs:cur).map(loadSheet));
+    S.err = res.every(r=>r.status==='rejected') ? 'Sheet unreachable' : null;
+    const need = full ? withGames() : withGames().filter(t=>cur.includes(t));
+    await Promise.all(need.map(t=>loadESPN(t, cur.includes(t))));
+    if (!S.err) S.updated = new Date();
+    compute();
+  }catch(e){ S.err='Load error'; console.error(e); }
+  render();
+}
+let tick=0;
+setInterval(()=>{ if (document.hidden) return; tick++;
+  const live = S.model && S.model.live;
+  if (tick%20===0) refresh(true);            // every 10 min: everything
+  else if (live || tick%2===0) refresh(false); // 30s while games are live, otherwise 60s
+}, 30000);
+document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) refresh(false); });
+render(); refresh(true);
+</script>
+</body>
+</html>
