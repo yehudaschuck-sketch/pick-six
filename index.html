@@ -150,7 +150,7 @@ details.flags li{margin:4px 0} details.flags li b{color:var(--gold)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script>
 /* Bump this on every upload: open copies (including home-screen apps) reload themselves when it changes. */
-const SITE_VERSION = '5';
+const SITE_VERSION = '6';
 async function checkVersion(){
   if (!/^https?:/.test(location.protocol)) return;
   try{
@@ -219,14 +219,34 @@ function parseCSV(text){
 }
 
 /* ============ STATE ============ */
-const S = { sheets:{}, espn:{}, espnOk:{}, view:ls.get('p6:view','board'), wk:null, cur:null, model:null, updated:null, err:null };
+const S = { sheets:{}, espn:{}, espnOk:{}, view:ls.get('p6:view','board'), wk:null, cur:null, model:null, updated:null, err:null, missing:{}, stale:{} };
 let MEM = Object.assign({}, CFG.knownPicks, ls.get('p6:picks',{}));
 
 /* ============ LOADING ============ */
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+// run fn over items a few at a time, so a phone on a weak connection is not firing 20+ requests at once
+async function pool(items, size, fn){
+  const q=items.slice(), run=async()=>{ while (q.length){ const it=q.shift(); try{ await fn(it); }catch(e){} } };
+  await Promise.all(Array.from({length:Math.min(size,q.length)}, run));
+}
+// A tab that fails to load is retried, then falls back to the last copy this device saw. It is never silently dropped.
 async function loadSheet(tab){
-  const r = await fetch(`https://docs.google.com/spreadsheets/d/${CFG.sheetId}/export?format=csv&gid=${tab.gid}&_=${Date.now()}`);
-  if (!r.ok) throw new Error('sheet '+r.status);
-  S.sheets[tab.name] = parseSheet(tab, parseCSV(await r.text()));
+  const ck = 'p6:sheet:'+tab.gid; let text=null;
+  for (let a=0; a<3 && text===null; a++){
+    try{
+      const r = await fetch(`https://docs.google.com/spreadsheets/d/${CFG.sheetId}/export?format=csv&gid=${tab.gid}&_=${Date.now()}`);
+      if (!r.ok) throw new Error('sheet '+r.status);
+      const t = await r.text(); if (/^\s*</.test(t)) throw new Error('not csv');
+      text = t;
+    }catch(e){ if (a<2) await sleep(700*(a+1)); }
+  }
+  if (text!==null){ ls.set(ck,text); delete S.stale[tab.name]; delete S.missing[tab.name]; }
+  else {
+    text = ls.get(ck,null);
+    if (text===null){ if (!S.sheets[tab.name]) S.missing[tab.name]=true; return; }
+    S.stale[tab.name]=true; delete S.missing[tab.name];
+  }
+  S.sheets[tab.name] = parseSheet(tab, parseCSV(text));
 }
 
 function parseSheet(tab, rows){
@@ -267,9 +287,15 @@ async function loadESPN(tab, force){
   const ck = `p6:espn:${CFG.season}:${tab.st}:${tab.wk}`;
   if (!force){ const c = ls.get(ck,null); if (c){ S.espn[tab.name]=c; S.espnOk[tab.name]=true; return; } }
   try{
-    const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${CFG.season}&seasontype=${tab.st}&week=${tab.wk}`);
-    if (!r.ok) throw new Error(r.status);
-    const d = await r.json(), map={};
+    let d=null;
+    for (let a=0; a<3 && !d; a++){
+      try{
+        const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${CFG.season}&seasontype=${tab.st}&week=${tab.wk}`);
+        if (!r.ok) throw new Error(r.status);
+        d = await r.json();
+      }catch(e){ if (a<2) await sleep(700*(a+1)); else throw e; }
+    }
+    const map={};
     for (const ev of d.events||[]){
       const c = ev.competitions[0], t = c.competitors.map(x=>({a:norm(x.team.abbreviation), s:+x.score||0}));
       map[gkey(t[0].a,t[1].a)] = {sc:{[t[0].a]:t[0].s,[t[1].a]:t[1].s}, state:c.status.type.state, detail:c.status.type.shortDetail, date:ev.date};
@@ -395,7 +421,7 @@ function render(){
   $('tabs').innerHTML = [['board','This Week'],['season','Season'],['anchors','Anchors'],['stats','Stats']]
     .map(([k,l])=>`<button data-view="${k}" class="${S.view===k?'on':''}">${l}</button>`).join('');
   const t = S.updated ? S.updated.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) : '';
-  $('status').innerHTML = `${M&&M.live?'<span class="livedot"></span>LIVE<br>':''}${S.err?esc(S.err)+'<br>':''}${t?'Updated '+t+' ':''}<button data-act="refresh">↻</button>`;
+  $('status').innerHTML = `${M&&M.live?'<span class="livedot"></span>LIVE<br>':''}${S.err?'<span style="color:#ff8a8a;font-weight:700">'+esc(S.err)+'</span><br>':''}${t?'Updated '+t+' ':''}<button data-act="refresh">↻</button>`;
   if (!M || !M.weeks.length){ $('main').innerHTML = `<div class="msg">${S.err?'Could not load the sheet.':'No games found in the sheet yet.'}</div>`; return; }
   setHTML('main', ({board:vBoard, season:vSeason, anchors:vAnchors, stats:vStats}[S.view]||vBoard)()
     + `<div class="tools"><button data-act="save">Save as image</button></div>`);
@@ -576,11 +602,17 @@ async function refresh(full){
     const cur = CFG.tabs.filter(t=>t.name===S.cur || t.name===S.wk);
     const idx = CFG.tabs.findIndex(t=>t.name===S.cur);
     if (idx>=0 && CFG.tabs[idx+1]) cur.push(CFG.tabs[idx+1]);
-    const res = await Promise.allSettled((full?CFG.tabs:cur).map(loadSheet));
-    S.err = res.every(r=>r.status==='rejected') ? 'Sheet unreachable' : null;
+    await pool(full?CFG.tabs:cur, 6, loadSheet);
+    const short = n => (CFG.tabs.find(t=>t.name===n)||{short:n}).short;
+    const miss = Object.keys(S.missing), old = Object.keys(S.stale);
+    S.err = miss.length===CFG.tabs.length ? 'Sheet unreachable'
+          : miss.length ? `Could not load ${miss.map(short).join(', ')} - tap to retry`
+          : old.length ? `Showing a saved copy of ${old.map(short).join(', ')}` : null;
     const need = full ? withGames() : withGames().filter(t=>cur.includes(t));
-    await Promise.all(need.map(t=>loadESPN(t, cur.includes(t))));
-    if (!S.err) S.updated = new Date();
+    await pool(need, 6, t=>loadESPN(t, cur.includes(t)));
+    const noScore = withGames().filter(t=>S.espnOk[t.name]===false).map(t=>t.short);
+    if (!S.err && noScore.length) S.err = `Scores unavailable for ${noScore.join(', ')} - tap to retry`;
+    if (!miss.length && !old.length) S.updated = new Date();
     compute();
   }catch(e){ S.err='Load error'; console.error(e); }
   render();
