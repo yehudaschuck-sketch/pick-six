@@ -60,10 +60,13 @@ h2 small{font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:1
 .bh span{display:block; font-size:16px; font-weight:700}
 .bh em{display:block; font-style:normal; font-size:11.5px; opacity:.8}
 .gm{padding:5px 6px; line-height:1.15}
-.gm .m{display:flex; align-items:center; gap:3px; font-weight:700; font-size:15px; white-space:nowrap}
+.gm .m{display:grid; grid-template-columns:17px auto; align-items:center; font-weight:700; font-size:15px; white-space:nowrap}
+.gm .m .tm{display:flex; align-items:center; gap:3px}
+.gm .m .h{grid-column:2}
+.gm .m em{font-style:normal; font-weight:600; font-size:12px; color:var(--mute); margin-left:2px}
 .gm .m i{font-style:normal; color:var(--mute); font-weight:500; font-size:12px; width:14px; flex:none}
 .gm .m img{width:17px; height:17px; flex:none; display:none}
-.gm .m u{text-decoration:none; color:var(--mute); font-weight:500; padding:0 1px}
+.gm .m u{text-decoration:none; color:var(--mute); font-weight:500; padding:0 2px 0 0}
 .gm .s{font-size:12.5px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-left:17px}
 .gm .s b{color:var(--gold); font-weight:700}
 .gm .s .lv{color:var(--live); font-weight:700}
@@ -131,7 +134,7 @@ details.flags ul{margin:0; padding:0 12px 12px 30px; color:#d5dbe8; font-size:16
 details.flags li{margin:4px 0} details.flags li b{color:var(--gold)}
 .msg{text-align:center; padding:40px 10px; color:var(--mute)}
 .foot{text-align:center; color:var(--mute); font-size:12.5px; letter-spacing:.2em; margin-top:26px; text-transform:uppercase}
-@media (min-width:640px){ body{font-size:19px} .gm .m{font-size:18px} .gm .m img{width:22px;height:22px;display:block} .gm .s{font-size:14px} .pk{font-size:16px; flex-direction:row; gap:6px} .pk img{width:28px;height:28px} .bh b{font-size:20px} }
+@media (min-width:640px){ body{font-size:19px} .gm .m{font-size:18px; display:flex; gap:6px} .gm .m em{font-size:14px} .gm .m img{width:22px;height:22px;display:block} .gm .s{font-size:14px} .pk{font-size:16px; flex-direction:row; gap:6px} .pk img{width:28px;height:28px} .bh b{font-size:20px} }
 </style>
 </head>
 <body>
@@ -150,7 +153,7 @@ details.flags li{margin:4px 0} details.flags li b{color:var(--gold)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script>
 /* Bump this on every upload: open copies (including home-screen apps) reload themselves when it changes. */
-const SITE_VERSION = '6';
+const SITE_VERSION = '7';
 async function checkVersion(){
   if (!/^https?:/.test(location.protocol)) return;
   try{
@@ -457,13 +460,28 @@ function recStrip(W){
   return `<div class="strip" style="--n:${W.players.length}">${order.map(x=>`<div style="--c:${color(x.p,x.i)}"><b>${esc(x.p)}</b><span>${recStr(x.r)}</span><em>${pctStr(x.r)}</em></div>`).join('')}</div>`;
 }
 
+// Each team's straight-up record going into this week, from final scores of the earlier regular-season weeks.
+// Playoff weeks show the full regular-season record.
+function teamRecords(tab){
+  const rec={}, idx=CFG.tabs.indexOf(tab);
+  for (const t of CFG.tabs.slice(0,idx)){
+    if (t.st!==2) continue;
+    for (const e of Object.values(S.espn[t.name]||{})){
+      if (e.state!=='post') continue;
+      const [a,b]=Object.keys(e.sc), ra=rec[a]=rec[a]||{w:0,l:0,t:0}, rb=rec[b]=rec[b]||{w:0,l:0,t:0};
+      if (e.sc[a]>e.sc[b]){ ra.w++; rb.l++; } else if (e.sc[a]<e.sc[b]){ rb.w++; ra.l++; } else { ra.t++; rb.t++; }
+    }
+  }
+  return rec;
+}
 function vBoard(){
   const M=S.model, W=M.weeks.find(w=>w.tab.name===S.wk), n=W.players.length, wi=M.weeks.indexOf(W);
   const chips = M.weeks.map(w=>`<button data-wk="${esc(w.tab.name)}" class="${w.tab.name===S.wk?'on':''} ${w.tab.name===S.cur?'cur':''}">${w.tab.short}</button>`).join('');
   const head = `<div class="bh g">GAME · SPREAD</div>` + W.players.map((p,i)=>{
     const r=tot(W.recs[i]), s=tot(M.weeks.slice(0,wi+1).reduce((a,w)=>addRec(a,w.recs[i]),rec0()));
     return `<div class="bh" style="background:${color(p,i)}"><b>${esc(p)}</b><span>${W.decided?recStr(r):'–'}</span><em>${recStr(s)}</em></div>`; }).join('');
-  const rows = W.games.map((g,gi)=>`<div class="gm"><div class="m"><i>${gi+1}</i>${img(g.away)}${g.away}<u>@</u>${g.home}${img(g.home)}</div>
+  const TR = teamRecords(W.tab), tr = t => TR[t] ? `<em>${recStr(TR[t])}</em>` : '';
+  const rows = W.games.map((g,gi)=>`<div class="gm"><div class="m"><i>${gi+1}</i><span class="tm">${img(g.away)}${g.away}${tr(g.away)}</span><span class="tm h"><u>@</u>${g.home}${tr(g.home)}${img(g.home)}</span></div>
       <div class="s">${g.spreadTeam?`<b>${g.spreadTeam} ${fmtLine(g.line)}</b>`:g.spreadRaw?`<b>${esc(g.spreadRaw)}</b>`:'No line yet'}</div>${g.e?`<div class="s">${gameStatus(g)}</div>`:''}</div>`
       + g.cells.map((c,pi)=>pickCell(g,c,pi)).join('')).join('');
   const notes = W.games.filter(g=>g.note).map(g=>{
