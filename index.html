@@ -112,7 +112,10 @@ table{border-collapse:collapse; width:100%; font-size:17px}
 th,td{padding:8px 8px; border-bottom:1px solid var(--line); text-align:center; white-space:nowrap}
 th{font-size:12.5px; letter-spacing:.12em; color:var(--mute); font-weight:600; text-transform:uppercase; background:#0a0f1a}
 tr:last-child td{border-bottom:0}
-td.pl{text-align:left; font-weight:700; text-transform:uppercase; letter-spacing:.04em; background:linear-gradient(90deg,var(--c),transparent 130%); position:sticky; left:0}
+td.pl{text-align:left; font-weight:700; text-transform:uppercase; letter-spacing:.04em; background:linear-gradient(90deg,var(--c),transparent 130%),#0c1220; position:sticky; left:0; z-index:1}
+.gm .ball{font-size:11px; margin-left:2px; line-height:1}
+.gm .ball.rz{filter:drop-shadow(0 0 3px var(--live))}
+.gm .s.dd{color:#d5dbe8}
 th.pl{text-align:left; position:sticky; left:0}
 td.rk{font-family:Anton,sans-serif; font-size:22px; color:var(--gold)}
 td.big{font-weight:700; font-size:20px}
@@ -153,7 +156,7 @@ details.flags li{margin:4px 0} details.flags li b{color:var(--gold)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script>
 /* Bump this on every upload: open copies (including home-screen apps) reload themselves when it changes. */
-const SITE_VERSION = '8';
+const SITE_VERSION = '9';
 async function checkVersion(){
   if (!/^https?:/.test(location.protocol)) return;
   try{
@@ -301,7 +304,11 @@ async function loadESPN(tab, force){
     const map={};
     for (const ev of d.events||[]){
       const c = ev.competitions[0], t = c.competitors.map(x=>({a:norm(x.team.abbreviation), s:+x.score||0}));
-      map[gkey(t[0].a,t[1].a)] = {sc:{[t[0].a]:t[0].s,[t[1].a]:t[1].s}, state:c.status.type.state, detail:c.status.type.shortDetail, date:ev.date};
+      // live games: who has the ball (ESPN gives the team id) and the down & distance
+      const sit = c.situation||{}, ids={}; c.competitors.forEach(x=>{ ids[String(x.team.id)] = norm(x.team.abbreviation); });
+      const live = c.status.type.state==='in';
+      map[gkey(t[0].a,t[1].a)] = {sc:{[t[0].a]:t[0].s,[t[1].a]:t[1].s}, state:c.status.type.state, detail:c.status.type.shortDetail, date:ev.date,
+        poss: live && sit.possession!=null ? (ids[String(sit.possession)]||null) : null, rz: live && !!sit.isRedZone, dd: live ? (sit.downDistanceText||sit.shortDownDistanceText||'') : ''};
     }
     S.espn[tab.name]=map; S.espnOk[tab.name]=true;
     const all = Object.values(map);
@@ -418,7 +425,8 @@ function standings(recs){
 /* ============ RENDER ============ */
 const $ = id => document.getElementById(id);
 const lastHTML = {};
-function setHTML(id, h){ if (lastHTML[id]!==h){ lastHTML[id]=h; $(id).innerHTML=h; } }
+// tables marked "end" open scrolled all the way right (latest weeks and totals); scroll left for earlier weeks
+function setHTML(id, h){ if (lastHTML[id]!==h){ lastHTML[id]=h; $(id).innerHTML=h; $(id).querySelectorAll('.tw.end').forEach(e=>{ e.scrollLeft=e.scrollWidth; }); } }
 function render(){
   const M=S.model;
   $('tabs').innerHTML = [['board','This Week'],['season','Season'],['anchors','Anchors'],['stats','Stats']]
@@ -481,8 +489,9 @@ function vBoard(){
     const r=tot(W.recs[i]), s=tot(M.weeks.slice(0,wi+1).reduce((a,w)=>addRec(a,w.recs[i]),rec0()));
     return `<div class="bh" style="background:${color(p,i)}"><b>${esc(p)}</b><span>${W.decided?recStr(r):'–'}</span><em>${recStr(s)}</em></div>`; }).join('');
   const TR = teamRecords(W.tab), tr = t => TR[t] ? `<em>(${recStr(TR[t])})</em>` : '';
-  const rows = W.games.map((g,gi)=>`<div class="gm"><div class="m"><i>${gi+1}</i><span class="tm">${img(g.away)}${g.away}${tr(g.away)}</span><span class="tm h"><u>@</u>${g.home}${tr(g.home)}${img(g.home)}</span></div>
-      <div class="s">${g.spreadTeam?`<b>${g.spreadTeam} ${fmtLine(g.line)}</b>`:g.spreadRaw?`<b>${esc(g.spreadRaw)}</b>`:'No line yet'}</div>${g.e?`<div class="s">${gameStatus(g)}</div>`:''}</div>`
+  const ball = (g,t) => g.e && g.e.poss===t ? `<span class="ball${g.e.rz?' rz':''}" title="${t} has the ball${g.e.rz?' (red zone)':''}">🏈</span>` : '';
+  const rows = W.games.map((g,gi)=>`<div class="gm"><div class="m"><i>${gi+1}</i><span class="tm">${img(g.away)}${g.away}${tr(g.away)}${ball(g,g.away)}</span><span class="tm h"><u>@</u>${g.home}${tr(g.home)}${ball(g,g.home)}${img(g.home)}</span></div>
+      <div class="s">${g.spreadTeam?`<b>${g.spreadTeam} ${fmtLine(g.line)}</b>`:g.spreadRaw?`<b>${esc(g.spreadRaw)}</b>`:'No line yet'}</div>${g.e?`<div class="s">${gameStatus(g)}</div>`:''}${g.e&&g.e.dd?`<div class="s dd">${esc(g.e.dd)}</div>`:''}</div>`
       + g.cells.map((c,pi)=>pickCell(g,c,pi)).join('')).join('');
   const notes = W.games.filter(g=>g.note).map(g=>{
     const m = /lock of the week/i.exec(g.note);
@@ -548,7 +557,7 @@ function vAnchors(){
   const rows = order.map(x=>`<tr><td class="pl" style="--c:${color(x.p,x.i)}">${esc(x.p)}</td>${M.dec.map(w=>`<td>${recStr(tot(w.anc[x.i])).replace(/^0-0$/,'<span class="same">0-0</span>')}</td>`).join('')}<td class="gold big">${recStr(x.r)}</td><td class="gold">${pctStr(x.r)}</td></tr>`).join('');
   return `<h1 class="title">Anchor<span>Picks</span></h1>
     <div class="sub">One guy against the other ${M.players.length-1} · Yellow picks only</div>
-    <div class="card tw"><table><tr><th class="pl">Player</th>${M.dec.map(w=>`<th>${w.tab.short}</th>`).join('')}<th>Total</th><th>Win %</th></tr>${rows}</table></div>
+    <div class="card tw end"><table><tr><th class="pl">Player</th>${M.dec.map(w=>`<th>${w.tab.short}</th>`).join('')}<th>Total</th><th>Win %</th></tr>${rows}</table></div>
     <h2>Anchors of the Week <small>${esc(W.tab.name)}</small></h2>${anchorRows(W)}`;
 }
 
